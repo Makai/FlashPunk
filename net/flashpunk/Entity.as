@@ -3,6 +3,7 @@ package net.flashpunk
 	import flash.display.BitmapData;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
+	import flash.utils.Dictionary;
 	import flash.utils.getDefinitionByName;
 	import flash.utils.getQualifiedClassName;
 
@@ -80,7 +81,18 @@ package net.flashpunk
 		 */
 		public function added():void
 		{
-			
+			for each (var component:Component in _components)
+			{
+				component.addedToWorld();
+			}
+		}
+		
+		/**
+		 * Override this, called when the Entity has been created via World.create().
+		 */
+		public function created():void
+		{
+			resetComponents();
 		}
 		
 		/**
@@ -88,7 +100,10 @@ package net.flashpunk
 		 */
 		public function removed():void
 		{
-			
+			for each (var component:Component in _components)
+			{
+				component.removedFromWorld();
+			}
 		}
 		
 		/**
@@ -96,7 +111,10 @@ package net.flashpunk
 		 */
 		override public function update():void 
 		{
-			
+			for each (var component:Component in _components)
+			{
+				if (component.active) component.update();
+			}
 		}
 		
 		/**
@@ -105,6 +123,22 @@ package net.flashpunk
 		 */
 		public function render():void 
 		{
+			for each (var component:Component in _components)
+			{
+				if (component.visible)
+				{
+					if (component.relative)
+					{
+						_point.x = x;
+						_point.y = y;
+					}
+					else _point.x = _point.y = 0;
+					_camera.x = _world ? _world.camera.x : FP.camera.x;
+					_camera.y = _world ? _world.camera.y : FP.camera.y;
+					component.render(renderTarget ? renderTarget : FP.buffer, _point, _camera);
+				}
+			}
+			
 			if (_graphic && _graphic.visible)
 			{
 				if (_graphic.relative)
@@ -754,6 +788,57 @@ package net.flashpunk
 		}
 		
 		public function getClass ():Class { return _class; }
+
+		/**
+		 * Add a component to the entity.
+		 * @param	name		Name for the component. This will replace any existing component with the same name.
+		 * @param	component		Component to add.
+		 * @return	The component that was added.
+		 */
+		public function setComponent(name:String, component:Component):Component
+		{
+			if (!_components) _components = new Dictionary();
+			var oldComponent:Component = _components[name];
+			if (oldComponent)
+			{
+				oldComponent.removed();
+				oldComponent.entity = null;
+			}
+			_components[name] = component;
+			if (component)
+			{
+				component.entity = this;
+				component.added();
+			}
+			return component;
+		}
+		
+		/**
+		 * Get a component by name.
+		 * @param	name		Name of the component.
+		 * @return	The component, or null if the entity doesn't have a component by that name.
+		 */
+		public function getComponent(name:String):Component
+		{
+			return _components ? _components[name] : null;
+		}
+		
+		/**
+		 * Check whether an entity has a component by name.
+		 * @param	name		Name of the component to check for.
+		 */
+		public function hasComponent(name:String):Boolean
+		{
+			return _components ? _components.hasOwnProperty(name) : false;
+		}
+		
+		public function resetComponents():void
+		{
+			for each (var component:Component in _components)
+			{
+				component.reset();
+			}
+		}
 		
 		// Entity information.
 		/** @private */ internal var _class:Class;
@@ -781,5 +866,8 @@ package net.flashpunk
 		/** @private */ internal var _graphic:Graphic;
 		/** @private */ private var _point:Point = FP.point;
 		/** @private */ private var _camera:Point = FP.point2;
+		
+		// Component information.
+		/** @private */ protected var _components:Dictionary;
 	}
 }
