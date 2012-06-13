@@ -418,6 +418,11 @@
 			return newMap;
 		}
 		
+		public function swapTileset (tileset:BitmapData):void
+		{
+			_set = tileset;
+		}
+		
 		/** Updates the graphical cache of a region of the tilemap. */
 		public function updateRect(rect:Rectangle, clear:Boolean):void
 		{
